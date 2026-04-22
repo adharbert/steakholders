@@ -1,0 +1,21 @@
+# Node
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# .NET
+**/bin/
+**/obj/
+backend/publish/
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+backend/.env
+backend/appsettings.Development.json
+
+# General
+.DS_Store
+*.user
+.vscode/
+.idea/
