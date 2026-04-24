@@ -28,6 +28,7 @@ export default function LoginScreen() {
     <div className="auth-wrap">
       <div className="auth-box">
         <div className="auth-brand">
+          <img className="auth-logo" src="/icons/icon-512.png" alt="Steakholders Meatup" />
           <div className="auth-brand-mark">Steakholders · Meatup</div>
           <div className="auth-tagline">Every cut. Every verdict.</div>
         </div>

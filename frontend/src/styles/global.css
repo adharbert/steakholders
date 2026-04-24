@@ -108,6 +108,13 @@ textarea, input { font-family: inherit; }
   align-items: center;
   justify-content: space-between;
 }
+.brand-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(201, 166, 120, 0.2);
+}
 .brand-mark {
   font-family: var(--font-display);
   font-weight: 900;
@@ -668,6 +675,15 @@ textarea, input { font-family: inherit; }
 .auth-brand {
   text-align: center;
   margin-bottom: 32px;
+}
+.auth-logo {
+  width: 172px;
+  height: 172px;
+  border-radius: 50%;
+  display: block;
+  margin: 0 auto 22px;
+  border: 1.5px solid rgba(201, 166, 120, 0.28);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.55);
 }
 .auth-brand-mark {
   font-family: var(--font-display);

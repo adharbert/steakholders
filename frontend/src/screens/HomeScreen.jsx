@@ -49,7 +49,10 @@ export default function HomeScreen() {
     <>
       <div className="screen-header">
         <div className="brand-row">
-          <div className="brand-mark">Steakholders · Meatup</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <img className="brand-logo" src="/icons/icon-192.png" alt="" aria-hidden="true" />
+            <div className="brand-mark">Steakholders · Meatup</div>
+          </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <button
               onClick={() => navigate('/meatups/new')}
@@ -70,8 +73,15 @@ export default function HomeScreen() {
         <div style={{ margin: '0 24px', height: 220, borderRadius: 20 }} className="skeleton" />
       ) : upcoming ? (
         <div className="upcoming-card">
-          <div className="upcoming-hero">
-            <div className="marbling" />
+          <div
+            className="upcoming-hero"
+            style={{
+              background: `
+                linear-gradient(180deg, rgba(10,6,4,0.15) 0%, rgba(18,9,7,0.97) 100%),
+                url('/icons/icon-512.png') center 18% / cover no-repeat
+              `
+            }}
+          >
             <div className="flame-chip"><Flame size={11} /> PRIME</div>
           </div>
           <div className="upcoming-body">
