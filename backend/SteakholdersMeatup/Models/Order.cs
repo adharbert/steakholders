@@ -7,6 +7,7 @@ public class Order
     public int UserId { get; set; }
     public string CutName { get; set; } = "";
     public int? WeightOz { get; set; }
+    public string? Temperature { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Meatup Meatup { get; set; } = null!;

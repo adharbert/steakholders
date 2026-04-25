@@ -18,6 +18,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         b.Entity<User>()
             .HasIndex(u => u.Username).IsUnique();
 
+        b.Entity<User>()
+            .HasIndex(u => u.Email).IsUnique()
+            .HasFilter("[Email] IS NOT NULL");
+
+        b.Entity<User>()
+            .HasIndex(u => new { u.AuthProvider, u.ProviderUserId }).IsUnique()
+            .HasFilter("[ProviderUserId] IS NOT NULL");
+
         b.Entity<Attendance>()
             .HasIndex(a => new { a.MeatupId, a.UserId }).IsUnique();
 

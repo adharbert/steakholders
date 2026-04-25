@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SteakholdersMeatup.Data;
 
@@ -10,9 +11,11 @@ using SteakholdersMeatup.Data;
 namespace SteakholdersMeatup.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260424235531_AddEmailAndOAuthProvider")]
+    partial class AddEmailAndOAuthProvider
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.6");
@@ -132,9 +135,6 @@ namespace SteakholdersMeatup.Migrations
                     b.Property<int>("MeatupId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("Temperature")
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("UserId")
                         .HasColumnType("INTEGER");
 
@@ -184,13 +184,13 @@ namespace SteakholdersMeatup.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("AmbianceRating")
-                        .HasColumnType("INTEGER");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("FoodQualityRating")
+                    b.Property<int>("DonenessRating")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FlavorRating")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Notes")
@@ -202,10 +202,10 @@ namespace SteakholdersMeatup.Migrations
                     b.Property<float>("OverallScore")
                         .HasColumnType("REAL");
 
-                    b.Property<int>("ServiceRating")
+                    b.Property<int>("TendernessRating")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("TasteRating")
+                    b.Property<int>("ValueRating")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

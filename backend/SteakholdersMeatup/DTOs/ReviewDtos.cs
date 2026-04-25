@@ -1,14 +1,14 @@
 namespace SteakholdersMeatup.DTOs;
 
-public record CreateOrderRequest(string CutName, int? WeightOz);
+public record CreateOrderRequest(string CutName, int? WeightOz, string? Temperature);
 
-public record OrderDto(int Id, int MeatupId, int UserId, string CutName, int? WeightOz, bool HasReview);
+public record OrderDto(int Id, int MeatupId, int UserId, string CutName, int? WeightOz, string? Temperature, bool HasReview);
 
 public record SubmitReviewRequest(
-    int DonenessRating,
-    int FlavorRating,
-    int TendernessRating,
-    int ValueRating,
+    int ServiceRating,
+    int AmbianceRating,
+    int FoodQualityRating,
+    int TasteRating,
     string? Notes
 );
 
@@ -21,11 +21,12 @@ public record ReviewDetailDto(
     string DisplayName,
     string CutName,
     int? WeightOz,
+    string? Temperature,
     double OverallScore,
-    int DonenessRating,
-    int FlavorRating,
-    int TendernessRating,
-    int ValueRating,
+    int ServiceRating,
+    int AmbianceRating,
+    int FoodQualityRating,
+    int TasteRating,
     string? Notes,
     DateTime CreatedAt
 );

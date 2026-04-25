@@ -41,9 +41,9 @@ public static class SeedData
         db.ChangeTracker.Clear();
 
         // Phase 4 — orders
-        var order1 = new Order { MeatupId = pastId, UserId = katieId,  CutName = "Dry-Aged Ribeye",   WeightOz = 22 };
-        var order2 = new Order { MeatupId = pastId, UserId = andyId,   CutName = "Tomahawk, Bone-In", WeightOz = 38 };
-        var order3 = new Order { MeatupId = pastId, UserId = marcusId, CutName = "Wagyu Filet",       WeightOz = 6  };
+        var order1 = new Order { MeatupId = pastId, UserId = katieId,  CutName = "Dry-Aged Ribeye",   WeightOz = 22, Temperature = "medium-rare" };
+        var order2 = new Order { MeatupId = pastId, UserId = andyId,   CutName = "Tomahawk, Bone-In", WeightOz = 38, Temperature = "medium"      };
+        var order3 = new Order { MeatupId = pastId, UserId = marcusId, CutName = "Wagyu Filet",       WeightOz = 6,  Temperature = "rare"        };
         db.Orders.AddRange(order1, order2, order3);
         db.SaveChanges();
         int o1 = order1.Id, o2 = order2.Id, o3 = order3.Id;
@@ -51,9 +51,9 @@ public static class SeedData
 
         // Phase 5 — reviews
         db.Reviews.AddRange(
-            new Review { OrderId = o1, DonenessRating = 5, FlavorRating = 5, TendernessRating = 4, ValueRating = 4, OverallScore = 4.5f,  Notes = "Crust was mesmerizing, interior a touch past medium-rare but forgivable at this marbling." },
-            new Review { OrderId = o2, DonenessRating = 4, FlavorRating = 4, TendernessRating = 4, ValueRating = 3, OverallScore = 3.75f, Notes = "A theatrical cut. Sharing portions generously, though the char crossed into bitter." },
-            new Review { OrderId = o3, DonenessRating = 5, FlavorRating = 5, TendernessRating = 5, ValueRating = 4, OverallScore = 4.75f, Notes = "Buttery beyond reason. Small portion but one of the finest bites of the year." }
+            new Review { OrderId = o1, ServiceRating = 5, AmbianceRating = 4, FoodQualityRating = 5, TasteRating = 4, OverallScore = 4.5f,  Notes = "Crust was mesmerizing, interior a touch past medium-rare but forgivable at this marbling." },
+            new Review { OrderId = o2, ServiceRating = 4, AmbianceRating = 4, FoodQualityRating = 4, TasteRating = 3, OverallScore = 3.75f, Notes = "A theatrical cut. Sharing portions generously, though the char crossed into bitter." },
+            new Review { OrderId = o3, ServiceRating = 5, AmbianceRating = 5, FoodQualityRating = 5, TasteRating = 4, OverallScore = 4.75f, Notes = "Buttery beyond reason. Small portion but one of the finest bites of the year." }
         );
         db.SaveChanges();
         db.ChangeTracker.Clear();

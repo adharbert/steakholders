@@ -19,9 +19,12 @@ Submit or update the calling user's order for a meatup. Upsert by `(meatupId, us
 ```json
 {
   "cutName": "Dry-Aged Ribeye",
-  "weightOz": 22
+  "weightOz": 22,
+  "temperature": "medium-rare"
 }
 ```
+- `temperature` is optional. Accepted values: `"rare"`, `"medium-rare"`, `"medium"`, `"medium-well"`, `"well-done"`.
+
 Returns `201 Created` (or `200 OK` on update) with:
 ```json
 {
@@ -30,6 +33,7 @@ Returns `201 Created` (or `200 OK` on update) with:
   "userId": 1,
   "cutName": "Dry-Aged Ribeye",
   "weightOz": 22,
+  "temperature": "medium-rare",
   "hasReview": false
 }
 ```
@@ -43,16 +47,16 @@ Submit or update a review for the calling user's order. One review per order.
 **Request body:**
 ```json
 {
-  "donenessRating": 5,
-  "flavorRating": 5,
-  "tendernessRating": 4,
-  "valueRating": 4,
+  "serviceRating": 5,
+  "ambianceRating": 4,
+  "foodQualityRating": 5,
+  "tasteRating": 4,
   "notes": "Crust was mesmerizing, interior a touch past medium-rare but forgivable at this marbling."
 }
 ```
 
 - Validate all ratings are 1–5.
-- Compute `overallScore = (donenessRating + flavorRating + tendernessRating + valueRating) / 4.0`, rounded to 1 decimal.
+- Compute `overallScore = (serviceRating + ambianceRating + foodQualityRating + tasteRating) / 4.0`, rounded to 1 decimal.
 - Returns `201 Created` (or `200 OK` on update) with the full review object.
 
 ### GET /api/reviews  *(requires JWT)*
@@ -77,11 +81,12 @@ Query params:
       "displayName": "Andy",
       "cutName": "Dry-Aged Ribeye",
       "weightOz": 22,
-      "overallScore": 4.6,
-      "donenessRating": 5,
-      "flavorRating": 5,
-      "tendernessRating": 4,
-      "valueRating": 4,
+      "temperature": "medium-rare",
+      "overallScore": 4.5,
+      "serviceRating": 5,
+      "ambianceRating": 4,
+      "foodQualityRating": 5,
+      "tasteRating": 4,
       "notes": "Crust was mesmerizing...",
       "createdAt": "2026-05-16T01:00:00Z"
     }
@@ -116,4 +121,6 @@ Returns the calling user's summary stats for the Home screen "Ledger" section.
 - [ ] Attempting to review another user's order returns 403.
 - [ ] `GET /api/reviews` supports pagination and all filter params.
 - [ ] `GET /api/users/me/stats` returns correct meatup count, avg score, and total spend.
-- [ ] Overall score is correctly computed as the average of the four individual ratings.
+- [ ] Overall score is correctly computed as the average of service, ambiance, food quality, and taste ratings.
+- [ ] Order records `cutName`, optional `weightOz`, and optional `temperature`.
+- [ ] `temperature` values are validated against the accepted list (rare, medium-rare, medium, medium-well, well-done).

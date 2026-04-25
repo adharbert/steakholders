@@ -185,9 +185,9 @@ public static class MeatupEndpoints
             .Where(o => o.Review is not null)
             .Select(o => new ReviewDetailDto(
                 o.Review!.Id, m.Id, m.RestaurantName, m.EventDate,
-                o.UserId, o.User.DisplayName, o.CutName, o.WeightOz,
-                o.Review.OverallScore, o.Review.DonenessRating, o.Review.FlavorRating,
-                o.Review.TendernessRating, o.Review.ValueRating, o.Review.Notes, o.Review.CreatedAt
+                o.UserId, o.User.DisplayName, o.CutName, o.WeightOz, o.Temperature,
+                o.Review.OverallScore, o.Review.ServiceRating, o.Review.AmbianceRating,
+                o.Review.FoodQualityRating, o.Review.TasteRating, o.Review.Notes, o.Review.CreatedAt
             )).ToList();
 
         BillDto? billDto = null;

@@ -28,20 +28,21 @@ public static class ReviewEndpoints
             {
                 existing.CutName = req.CutName;
                 existing.WeightOz = req.WeightOz;
+                existing.Temperature = req.Temperature;
                 await db.SaveChangesAsync();
-                return Results.Ok(new OrderDto(existing.Id, meatupId, userId, existing.CutName, existing.WeightOz, existing.Review is not null));
+                return Results.Ok(new OrderDto(existing.Id, meatupId, userId, existing.CutName, existing.WeightOz, existing.Temperature, existing.Review is not null));
             }
 
-            var order = new Order { MeatupId = meatupId, UserId = userId, CutName = req.CutName, WeightOz = req.WeightOz };
+            var order = new Order { MeatupId = meatupId, UserId = userId, CutName = req.CutName, WeightOz = req.WeightOz, Temperature = req.Temperature };
             db.Orders.Add(order);
             await db.SaveChangesAsync();
-            return Results.Created($"/api/orders/{order.Id}", new OrderDto(order.Id, meatupId, userId, order.CutName, order.WeightOz, false));
+            return Results.Created($"/api/orders/{order.Id}", new OrderDto(order.Id, meatupId, userId, order.CutName, order.WeightOz, order.Temperature, false));
         }).RequireAuthorization();
 
         app.MapGet("/api/meatups/{meatupId:int}/orders", async (int meatupId, AppDbContext db) =>
         {
             var orders = await db.Orders.Include(o => o.Review).Where(o => o.MeatupId == meatupId).ToListAsync();
-            return Results.Ok(orders.Select(o => new OrderDto(o.Id, meatupId, o.UserId, o.CutName, o.WeightOz, o.Review is not null)));
+            return Results.Ok(orders.Select(o => new OrderDto(o.Id, meatupId, o.UserId, o.CutName, o.WeightOz, o.Temperature, o.Review is not null)));
         }).RequireAuthorization();
 
         app.MapPost("/api/orders/{orderId:int}/review", async (
@@ -50,10 +51,10 @@ public static class ReviewEndpoints
             AppDbContext db,
             ClaimsPrincipal principal) =>
         {
-            if (req.DonenessRating < 1 || req.DonenessRating > 5 ||
-                req.FlavorRating < 1 || req.FlavorRating > 5 ||
-                req.TendernessRating < 1 || req.TendernessRating > 5 ||
-                req.ValueRating < 1 || req.ValueRating > 5)
+            if (req.ServiceRating < 1 || req.ServiceRating > 5 ||
+                req.AmbianceRating < 1 || req.AmbianceRating > 5 ||
+                req.FoodQualityRating < 1 || req.FoodQualityRating > 5 ||
+                req.TasteRating < 1 || req.TasteRating > 5)
                 return Results.BadRequest(new { error = "All ratings must be between 1 and 5." });
 
             var userId = GetUserId(principal);
@@ -61,14 +62,14 @@ public static class ReviewEndpoints
             if (order is null) return Results.NotFound(new { error = "Order not found." });
             if (order.UserId != userId) return Results.Forbid();
 
-            var overall = (float)Math.Round((req.DonenessRating + req.FlavorRating + req.TendernessRating + req.ValueRating) / 4.0, 1);
+            var overall = (float)Math.Round((req.ServiceRating + req.AmbianceRating + req.FoodQualityRating + req.TasteRating) / 4.0, 1);
 
             if (order.Review is not null)
             {
-                order.Review.DonenessRating = req.DonenessRating;
-                order.Review.FlavorRating = req.FlavorRating;
-                order.Review.TendernessRating = req.TendernessRating;
-                order.Review.ValueRating = req.ValueRating;
+                order.Review.ServiceRating = req.ServiceRating;
+                order.Review.AmbianceRating = req.AmbianceRating;
+                order.Review.FoodQualityRating = req.FoodQualityRating;
+                order.Review.TasteRating = req.TasteRating;
                 order.Review.OverallScore = overall;
                 order.Review.Notes = req.Notes;
                 await db.SaveChangesAsync();
@@ -78,10 +79,10 @@ public static class ReviewEndpoints
             var review = new Review
             {
                 OrderId = orderId,
-                DonenessRating = req.DonenessRating,
-                FlavorRating = req.FlavorRating,
-                TendernessRating = req.TendernessRating,
-                ValueRating = req.ValueRating,
+                ServiceRating = req.ServiceRating,
+                AmbianceRating = req.AmbianceRating,
+                FoodQualityRating = req.FoodQualityRating,
+                TasteRating = req.TasteRating,
                 OverallScore = overall,
                 Notes = req.Notes
             };
@@ -166,8 +167,8 @@ public static class ReviewEndpoints
 
     private static ReviewDetailDto ToReviewDto(Review r, Order o) => new(
         r.Id, o.MeatupId, o.Meatup?.RestaurantName ?? "", o.Meatup?.EventDate ?? default,
-        o.UserId, o.User?.DisplayName ?? "", o.CutName, o.WeightOz,
-        r.OverallScore, r.DonenessRating, r.FlavorRating, r.TendernessRating, r.ValueRating,
+        o.UserId, o.User?.DisplayName ?? "", o.CutName, o.WeightOz, o.Temperature,
+        r.OverallScore, r.ServiceRating, r.AmbianceRating, r.FoodQualityRating, r.TasteRating,
         r.Notes, r.CreatedAt
     );
 }

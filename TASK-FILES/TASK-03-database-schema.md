@@ -17,10 +17,13 @@ Create all EF Core model classes, configure `AppDbContext`, and run the initial 
 |---|---|---|
 | Id | int PK | auto-increment |
 | Username | string | unique, max 50 chars |
-| PasswordHash | string | bcrypt hash |
+| PasswordHash | string? | bcrypt hash; null for OAuth-only users |
 | DisplayName | string | shown in UI, e.g. "Katie" |
 | Role | string | e.g. "President", "Founder", "Treasurer", "Grill Master", "Notes Keeper", "Sommelier", "Member" |
 | CreatedAt | DateTime | UTC |
+| Email | string? | unique (where non-null); used for email/password and OAuth accounts |
+| AuthProvider | string? | null or "local" for email/password; "google" or "facebook" for social accounts |
+| ProviderUserId | string? | external provider user ID; composite unique with AuthProvider (where non-null) |
 
 ### Meatups
 | Column | Type | Notes |
@@ -52,6 +55,7 @@ Unique constraint on `(MeatupId, UserId)`.
 | UserId | int FK → Users | |
 | CutName | string | e.g. "Dry-Aged Ribeye" |
 | WeightOz | int? | e.g. 22 |
+| Temperature | string? | e.g. "rare", "medium-rare", "medium", "medium-well", "well-done" |
 | CreatedAt | DateTime | |
 
 ### Reviews
@@ -59,10 +63,10 @@ Unique constraint on `(MeatupId, UserId)`.
 |---|---|---|
 | Id | int PK | |
 | OrderId | int FK → Orders | unique (one review per order) |
-| DonenessRating | int | 1–5 |
-| FlavorRating | int | 1–5 |
-| TendernessRating | int | 1–5 |
-| ValueRating | int | 1–5 |
+| ServiceRating | int | 1–5 |
+| AmbianceRating | int | 1–5 |
+| FoodQualityRating | int | 1–5 |
+| TasteRating | int | 1–5 |
 | OverallScore | float | computed: avg of the four ratings |
 | Notes | string? | tasting notes |
 | CreatedAt | DateTime | |
