@@ -3,7 +3,22 @@
     "allow": [
       "Bash(dotnet ef *)",
       "Bash(dotnet tool *)",
-      "Bash(dotnet build *)"
+      "Bash(dotnet build *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(./node_modules/.bin/vite build *)",
+      "PowerShell(npm config get production 2>&1)",
+      "PowerShell($env:NODE_ENV)",
+      "Bash(grep -n \"DropForeignKey\\\\|CreateTable\\\\|\\\\\"Up\\\\\"\" \"f:/code/steakholders/backend/SteakholdersMeatup/Migrations/$\\(ls f:/code/steakholders/backend/SteakholdersMeatup/Migrations/*.cs)",
+      "Bash(grep -c \"CreateTable\\\\|AddColumn\" \"f:/code/steakholders/backend/SteakholdersMeatup/Migrations/$\\(ls f:/code/steakholders/backend/SteakholdersMeatup/Migrations/)",
+      "Bash(dotnet run *)",
+      "Bash(curl -s http://localhost:5000/health)",
+      "Bash(kill %1)",
+      "Bash(curl -s http://localhost:5175/)",
+      "Bash(python3 -c \"import sys,json,re; m=re.search\\(r'const error = \\({.*?}\\);', sys.stdin.read\\(\\)\\); d=json.loads\\(m.group\\(1\\)\\) if m else {}; print\\(d.get\\('message','no error'\\)[:200]\\)\")",
+      "Bash(node --input-type=module)",
+      "Bash(echo \"exit: $?\")",
+      "PowerShell(npm config get production)"
     ]
   }
 }

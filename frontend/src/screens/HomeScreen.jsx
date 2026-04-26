@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Flame, MapPin, Plus } from 'lucide-react';
+import { Calendar, Flame, MapPin, Plus, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getMeatups, rsvp } from '../api/meatups';
 import { getReviews, getMyStats } from '../api/reviews';
+import { getMyGroups } from '../api/groups';
 
 const AVATAR_COLORS = ['', 'blue', 'green', 'gold', 'blue', 'green'];
 
-function greeting(name) {
+function greeting() {
   const h = new Date().getHours();
-  if (h >= 5  && h < 12) return `Good morning, `;
-  if (h >= 12 && h < 17) return `Good afternoon, `;
-  if (h >= 17 && h < 24) return `Good evening, `;
-  return `Late night, `;
+  if (h >= 5  && h < 12) return 'Good morning, ';
+  if (h >= 12 && h < 17) return 'Good afternoon, ';
+  if (h >= 17 && h < 24) return 'Good evening, ';
+  return 'Late night, ';
 }
 
 export default function HomeScreen() {
@@ -22,6 +23,8 @@ export default function HomeScreen() {
   const [upcoming, setUpcoming] = useState(null);
   const [stats, setStats]       = useState(null);
   const [reviews, setReviews]   = useState([]);
+  const [groups, setGroups]     = useState([]);
+  const [pending, setPending]   = useState([]);
   const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
@@ -29,18 +32,27 @@ export default function HomeScreen() {
       getMeatups({ upcoming: true }),
       getMyStats(),
       getReviews({ limit: 5 }),
-    ]).then(([meatups, s, r]) => {
+      getMyGroups(),
+      getMeatups({}),
+    ]).then(([meatups, s, r, g, all]) => {
       setUpcoming(meatups[0] ?? null);
       setStats(s);
       setReviews(r.reviews);
+      setGroups(g);
+      // Pending RSVPs: upcoming meatups where my status is "pending"
+      const now = new Date();
+      setPending(all.filter(m => m.myRsvpStatus === 'pending' && new Date(m.eventDate) > now));
     }).finally(() => setLoading(false));
   }, []);
 
-  const handleRsvp = async () => {
-    if (!upcoming) return;
-    const newStatus = upcoming.myRsvpStatus === 'going' ? 'not_going' : 'going';
-    const updated = await rsvp(upcoming.id, newStatus);
-    setUpcoming(u => ({ ...u, myRsvpStatus: updated.status }));
+  const handleRsvp = async (meatupId, newStatus, isPending = false) => {
+    const updated = await rsvp(meatupId, newStatus);
+    if (isPending) {
+      setPending(p => p.filter(m => m.id !== meatupId));
+    }
+    if (upcoming?.id === meatupId) {
+      setUpcoming(u => ({ ...u, myRsvpStatus: updated.status }));
+    }
   };
 
   const goingCount = upcoming?.attendeeCount ?? 0;
@@ -61,12 +73,35 @@ export default function HomeScreen() {
             >
               <Plus size={20} />
             </button>
-            <div className={`avatar md`}>{user?.displayName?.[0] ?? '?'}</div>
+            <div className="avatar md">{user?.displayName?.[0] ?? '?'}</div>
           </div>
         </div>
-        <div className="greeting">{greeting(user?.displayName)}<em>{user?.displayName}</em></div>
+        <div className="greeting">{greeting()}<em>{user?.displayName}</em></div>
         <div className="subgreet">Your next cut awaits.</div>
       </div>
+
+      {/* Pending RSVPs */}
+      {!loading && pending.length > 0 && (
+        <>
+          <div className="section-label">Awaiting Your RSVP</div>
+          {pending.map(m => (
+            <div key={m.id} className="pending-rsvp-card">
+              <div className="pending-rsvp-info">
+                <div className="pending-rsvp-name">{m.displayName}</div>
+                <div className="pending-rsvp-meta">
+                  <Calendar size={11} style={{ marginRight: 4 }} />
+                  {new Date(m.eventDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  {m.groupName && ` · ${m.groupName}`}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className="rsvp-btn going" onClick={() => handleRsvp(m.id, 'going', true)}>Going</button>
+                <button className="rsvp-btn" onClick={() => handleRsvp(m.id, 'not_going', true)}>Skip</button>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
 
       <div className="section-label">Upcoming Meatup</div>
       {loading ? (
@@ -89,8 +124,13 @@ export default function HomeScreen() {
               <Calendar size={11} />
               {new Date(upcoming.eventDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).toUpperCase()}
             </div>
-            <div className="restaurant-name">{upcoming.restaurantName}</div>
-            <div className="restaurant-location"><MapPin size={13} /> {upcoming.location}</div>
+            <div className="restaurant-name">{upcoming.displayName}</div>
+            <div className="restaurant-location"><MapPin size={13} /> {upcoming.displayLocation}</div>
+            {upcoming.groupName && (
+              <div style={{ fontSize: 11, color: 'var(--color-gold)', opacity: 0.8, marginTop: 4 }}>
+                <Users size={11} style={{ marginRight: 4 }} />{upcoming.groupName}
+              </div>
+            )}
             <div className="attendees">
               <div className="avatar-stack">
                 {Array.from({ length: Math.min(goingCount, 4) }).map((_, i) => (
@@ -104,7 +144,7 @@ export default function HomeScreen() {
               </div>
               <button
                 className={`rsvp-btn ${upcoming.myRsvpStatus === 'going' ? 'going' : ''}`}
-                onClick={handleRsvp}
+                onClick={() => handleRsvp(upcoming.id, upcoming.myRsvpStatus === 'going' ? 'not_going' : 'going')}
               >
                 {upcoming.myRsvpStatus === 'going' ? 'GOING ✓' : 'RSVP'}
               </button>
@@ -120,6 +160,41 @@ export default function HomeScreen() {
           <button className="submit-btn" onClick={() => navigate('/meatups/new')}>
             Schedule a Meatup
           </button>
+        </div>
+      )}
+
+      {/* Groups */}
+      {!loading && groups.length > 0 && (
+        <>
+          <div className="section-label">My Groups</div>
+          <div className="group-chips">
+            {groups.map(g => (
+              <button key={g.id} className="group-chip" onClick={() => navigate(`/groups/${g.id}`)}>
+                <Users size={12} style={{ marginRight: 6 }} />
+                {g.name}
+                <span className="group-chip-count">{g.memberCount}</span>
+              </button>
+            ))}
+            <button className="group-chip outline" onClick={() => navigate('/groups/join')}>
+              + Join
+            </button>
+          </div>
+        </>
+      )}
+      {!loading && groups.length === 0 && (
+        <div style={{ margin: '0 24px 16px' }}>
+          <div className="empty-state">
+            <div className="empty-state-title">No groups yet</div>
+            <div className="empty-state-sub">Join or create a group to plan meatups together.</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="submit-btn" style={{ flex: 1 }} onClick={() => navigate('/groups/join')}>
+              Join a Group
+            </button>
+            <button className="submit-btn" style={{ flex: 1, background: 'transparent', border: '1px solid var(--color-gold)' }} onClick={() => navigate('/groups/new')}>
+              Create Group
+            </button>
+          </div>
         </div>
       )}
 

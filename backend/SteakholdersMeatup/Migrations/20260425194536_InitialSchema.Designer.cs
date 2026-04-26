@@ -11,8 +11,8 @@ using SteakholdersMeatup.Data;
 namespace SteakholdersMeatup.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260424235531_AddEmailAndOAuthProvider")]
-    partial class AddEmailAndOAuthProvider
+    [Migration("20260425194536_InitialSchema")]
+    partial class InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -81,6 +81,84 @@ namespace SteakholdersMeatup.Migrations
                     b.ToTable("Bills");
                 });
 
+            modelBuilder.Entity("SteakholdersMeatup.Models.Group", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("InviteCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsPrivate")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("LeaderUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ZipCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InviteCode")
+                        .IsUnique();
+
+                    b.HasIndex("LeaderUserId");
+
+                    b.ToTable("Groups");
+                });
+
+            modelBuilder.Entity("SteakholdersMeatup.Models.GroupMembership", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("JoinedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RequestedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("GroupId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("GroupMemberships");
+                });
+
             modelBuilder.Entity("SteakholdersMeatup.Models.Meatup", b =>
                 {
                     b.Property<int>("Id")
@@ -96,25 +174,56 @@ namespace SteakholdersMeatup.Migrations
                     b.Property<DateTime>("EventDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("GroupId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Location")
-                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Notes")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("RestaurantId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("RestaurantName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VenueCity")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VenueCountry")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("VenueLatitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("VenueLongitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("VenueName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VenueState")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VenueStreet1")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VenueType")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int?>("UserId")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("VenueZip")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("RestaurantId");
 
                     b.ToTable("Meatups");
                 });
@@ -134,6 +243,9 @@ namespace SteakholdersMeatup.Migrations
 
                     b.Property<int>("MeatupId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("Temperature")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("UserId")
                         .HasColumnType("INTEGER");
@@ -178,19 +290,108 @@ namespace SteakholdersMeatup.Migrations
                     b.ToTable("Payments");
                 });
 
+            modelBuilder.Entity("SteakholdersMeatup.Models.Restaurant", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ExternalPlaceId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Street1")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Street2")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Website")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Zip")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("Restaurants");
+                });
+
+            modelBuilder.Entity("SteakholdersMeatup.Models.RestaurantSummary", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("GeneratedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RestaurantName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ReviewCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SummaryText")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RestaurantName")
+                        .IsUnique();
+
+                    b.ToTable("RestaurantSummaries");
+                });
+
             modelBuilder.Entity("SteakholdersMeatup.Models.Review", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("AmbianceRating")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("DonenessRating")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("FlavorRating")
+                    b.Property<int>("FoodQualityRating")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Notes")
@@ -202,10 +403,10 @@ namespace SteakholdersMeatup.Migrations
                     b.Property<float>("OverallScore")
                         .HasColumnType("REAL");
 
-                    b.Property<int>("TendernessRating")
+                    b.Property<int>("ServiceRating")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("ValueRating")
+                    b.Property<int>("TasteRating")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
@@ -216,6 +417,29 @@ namespace SteakholdersMeatup.Migrations
                     b.ToTable("Reviews");
                 });
 
+            modelBuilder.Entity("SteakholdersMeatup.Models.ReviewPhoto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ReviewId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewId");
+
+                    b.ToTable("ReviewPhotos");
+                });
+
             modelBuilder.Entity("SteakholdersMeatup.Models.User", b =>
                 {
                     b.Property<int>("Id")
@@ -223,6 +447,12 @@ namespace SteakholdersMeatup.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("AuthProvider")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("City")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Country")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -235,6 +465,12 @@ namespace SteakholdersMeatup.Migrations
                     b.Property<string>("Email")
                         .HasColumnType("TEXT");
 
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("REAL");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("REAL");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("TEXT");
 
@@ -245,7 +481,17 @@ namespace SteakholdersMeatup.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("State")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Street1")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ZipCode")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -295,19 +541,59 @@ namespace SteakholdersMeatup.Migrations
                     b.Navigation("Meatup");
                 });
 
+            modelBuilder.Entity("SteakholdersMeatup.Models.Group", b =>
+                {
+                    b.HasOne("SteakholdersMeatup.Models.User", "Leader")
+                        .WithMany()
+                        .HasForeignKey("LeaderUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Leader");
+                });
+
+            modelBuilder.Entity("SteakholdersMeatup.Models.GroupMembership", b =>
+                {
+                    b.HasOne("SteakholdersMeatup.Models.Group", "Group")
+                        .WithMany("Memberships")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SteakholdersMeatup.Models.User", "User")
+                        .WithMany("GroupMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Group");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SteakholdersMeatup.Models.Meatup", b =>
                 {
                     b.HasOne("SteakholdersMeatup.Models.User", "CreatedBy")
-                        .WithMany()
+                        .WithMany("CreatedMeatups")
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("SteakholdersMeatup.Models.User", null)
-                        .WithMany("CreatedMeatups")
-                        .HasForeignKey("UserId");
+                    b.HasOne("SteakholdersMeatup.Models.Group", "Group")
+                        .WithMany("Meatups")
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("SteakholdersMeatup.Models.Restaurant", "Restaurant")
+                        .WithMany("Meatups")
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedBy");
+
+                    b.Navigation("Group");
+
+                    b.Navigation("Restaurant");
                 });
 
             modelBuilder.Entity("SteakholdersMeatup.Models.Order", b =>
@@ -348,6 +634,17 @@ namespace SteakholdersMeatup.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SteakholdersMeatup.Models.Restaurant", b =>
+                {
+                    b.HasOne("SteakholdersMeatup.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+                });
+
             modelBuilder.Entity("SteakholdersMeatup.Models.Review", b =>
                 {
                     b.HasOne("SteakholdersMeatup.Models.Order", "Order")
@@ -359,9 +656,27 @@ namespace SteakholdersMeatup.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("SteakholdersMeatup.Models.ReviewPhoto", b =>
+                {
+                    b.HasOne("SteakholdersMeatup.Models.Review", "Review")
+                        .WithMany("Photos")
+                        .HasForeignKey("ReviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Review");
+                });
+
             modelBuilder.Entity("SteakholdersMeatup.Models.Bill", b =>
                 {
                     b.Navigation("Payments");
+                });
+
+            modelBuilder.Entity("SteakholdersMeatup.Models.Group", b =>
+                {
+                    b.Navigation("Meatups");
+
+                    b.Navigation("Memberships");
                 });
 
             modelBuilder.Entity("SteakholdersMeatup.Models.Meatup", b =>
@@ -378,11 +693,23 @@ namespace SteakholdersMeatup.Migrations
                     b.Navigation("Review");
                 });
 
+            modelBuilder.Entity("SteakholdersMeatup.Models.Restaurant", b =>
+                {
+                    b.Navigation("Meatups");
+                });
+
+            modelBuilder.Entity("SteakholdersMeatup.Models.Review", b =>
+                {
+                    b.Navigation("Photos");
+                });
+
             modelBuilder.Entity("SteakholdersMeatup.Models.User", b =>
                 {
                     b.Navigation("Attendances");
 
                     b.Navigation("CreatedMeatups");
+
+                    b.Navigation("GroupMemberships");
 
                     b.Navigation("Orders");
 

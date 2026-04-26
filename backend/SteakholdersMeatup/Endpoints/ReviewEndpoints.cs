@@ -23,6 +23,10 @@ public static class ReviewEndpoints
             var meatup = await db.Meatups.FindAsync(meatupId);
             if (meatup is null) return Results.NotFound(new { error = "Meatup not found." });
 
+            // Orders only allowed for restaurant events
+            if (meatup.VenueType != "restaurant")
+                return Results.BadRequest(new { error = "Orders and reviews are only allowed for restaurant events." });
+
             var existing = await db.Orders.Include(o => o.Review).FirstOrDefaultAsync(o => o.MeatupId == meatupId && o.UserId == userId);
             if (existing is not null)
             {
@@ -58,9 +62,18 @@ public static class ReviewEndpoints
                 return Results.BadRequest(new { error = "All ratings must be between 1 and 5." });
 
             var userId = GetUserId(principal);
-            var order = await db.Orders.Include(o => o.Review).Include(o => o.Meatup).Include(o => o.User).FirstOrDefaultAsync(o => o.Id == orderId);
+            var order = await db.Orders
+                .Include(o => o.Review)
+                .Include(o => o.Meatup)
+                .Include(o => o.User)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
             if (order is null) return Results.NotFound(new { error = "Order not found." });
             if (order.UserId != userId) return Results.Forbid();
+
+            // Gate: reviews only for restaurant venues
+            if (order.Meatup.VenueType != "restaurant")
+                return Results.BadRequest(new { error = "Reviews are only allowed for restaurant events." });
 
             var overall = (float)Math.Round((req.ServiceRating + req.AmbianceRating + req.FoodQualityRating + req.TasteRating) / 4.0, 1);
 
@@ -100,7 +113,7 @@ public static class ReviewEndpoints
         {
             var query = db.Reviews
                 .Include(r => r.Order).ThenInclude(o => o.User)
-                .Include(r => r.Order).ThenInclude(o => o.Meatup)
+                .Include(r => r.Order).ThenInclude(o => o.Meatup).ThenInclude(m => m.Restaurant)
                 .AsQueryable();
 
             if (userId.HasValue) query = query.Where(r => r.Order.UserId == userId);
@@ -153,22 +166,32 @@ public static class ReviewEndpoints
             var pendingIds = meatupIds.Except(reviewedMeatupIds).ToList();
 
             var meatups = await db.Meatups
-                .Where(m => pendingIds.Contains(m.Id))
+                .Include(m => m.Restaurant)
+                .Where(m => pendingIds.Contains(m.Id) && m.VenueType == "restaurant")
                 .OrderByDescending(m => m.EventDate)
-                .Select(m => new { m.Id, m.RestaurantName, m.Location, m.EventDate })
                 .ToListAsync();
 
-            return Results.Ok(meatups);
+            return Results.Ok(meatups.Select(m => new
+            {
+                m.Id,
+                RestaurantName = m.Restaurant?.Name ?? m.RestaurantName ?? "",
+                Location = m.Restaurant != null ? $"{m.Restaurant.City}, {m.Restaurant.State}" : m.Location ?? "",
+                m.EventDate
+            }));
         }).RequireAuthorization();
     }
 
     private static int GetUserId(ClaimsPrincipal p) =>
         int.Parse(p.FindFirstValue(ClaimTypes.NameIdentifier) ?? p.FindFirstValue("sub") ?? "0");
 
-    private static ReviewDetailDto ToReviewDto(Review r, Order o) => new(
-        r.Id, o.MeatupId, o.Meatup?.RestaurantName ?? "", o.Meatup?.EventDate ?? default,
-        o.UserId, o.User?.DisplayName ?? "", o.CutName, o.WeightOz, o.Temperature,
-        r.OverallScore, r.ServiceRating, r.AmbianceRating, r.FoodQualityRating, r.TasteRating,
-        r.Notes, r.CreatedAt
-    );
+    private static ReviewDetailDto ToReviewDto(Review r, Order o)
+    {
+        var restaurantName = o.Meatup?.Restaurant?.Name ?? o.Meatup?.RestaurantName ?? "";
+        return new(
+            r.Id, o.MeatupId, restaurantName, o.Meatup?.EventDate ?? default,
+            o.UserId, o.User?.DisplayName ?? "", o.CutName, o.WeightOz, o.Temperature,
+            r.OverallScore, r.ServiceRating, r.AmbianceRating, r.FoodQualityRating, r.TasteRating,
+            r.Notes, r.CreatedAt
+        );
+    }
 }

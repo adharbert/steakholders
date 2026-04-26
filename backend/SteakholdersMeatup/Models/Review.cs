@@ -13,4 +13,5 @@ public class Review
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Order Order { get; set; } = null!;
+    public ICollection<ReviewPhoto> Photos { get; set; } = [];
 }

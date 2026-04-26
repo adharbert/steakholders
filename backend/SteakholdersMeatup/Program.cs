@@ -52,12 +52,25 @@ builder.Services.AddAuthorization();
 
 // Services
 builder.Services.AddSingleton<TokenService>();
+builder.Services.AddScoped<LlmSummaryService>();
+builder.Services.AddScoped<GeocodingService>();
+builder.Services.AddScoped<PlacesService>();
+builder.Services.AddHttpClient("anthropic");
+builder.Services.AddHttpClient("nominatim", c =>
+{
+    c.DefaultRequestHeaders.Add("User-Agent", "SteakholdersMeatup/1.0 (contact@steakholders.app)");
+});
+builder.Services.AddHttpClient("googleplaces");
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Ensure wwwroot/uploads directory exists for photo storage
+var uploadsPath = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), "uploads");
+Directory.CreateDirectory(uploadsPath);
 
 // Global exception handler
 app.UseExceptionHandler(errApp => errApp.Run(async ctx =>
@@ -73,6 +86,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -91,8 +105,12 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 // API routes
 app.MapAuthEndpoints();
+app.MapGroupEndpoints();
+app.MapRestaurantEndpoints();
 app.MapMeatupEndpoints();
 app.MapReviewEndpoints();
 app.MapBillEndpoints();
+app.MapPublicEndpoints();
+app.MapPhotoEndpoints();
 
 app.Run();

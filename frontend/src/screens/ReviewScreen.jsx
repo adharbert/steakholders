@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, ImagePlus, X } from 'lucide-react';
 import { getReviews, getPendingReviews, createOrder, submitReview } from '../api/reviews';
+import { uploadPhoto } from '../api/photos';
 
 function StarBtn({ filled, onClick, readOnly }) {
   return (
@@ -28,14 +29,13 @@ function Stars({ value, onChange, readOnly = false }) {
   );
 }
 
-// Read-only view for a single review
 function ReviewReadOnly({ review }) {
   const navigate = useNavigate();
   return (
     <>
       <button className="back-link" onClick={() => navigate(-1)}>← Back</button>
       <div className="meat-hero">
-        <div className="marbling" style={{ opacity: 0.5, backgroundImage: 'radial-gradient(ellipse 60px 14px at 25% 35%, rgba(244,232,208,0.6), transparent), radial-gradient(ellipse 40px 10px at 60% 55%, rgba(244,232,208,0.4), transparent), radial-gradient(ellipse 80px 16px at 75% 30%, rgba(244,232,208,0.5), transparent)' }} />
+        <div className="marbling" style={{ opacity: 0.5 }} />
         <div className="meat-hero-label">
           {review.weightOz && <div className="meat-hero-sub">YOUR ORDER · {review.weightOz} OZ</div>}
           <div className="meat-hero-title">{review.cutName}</div>
@@ -45,10 +45,10 @@ function ReviewReadOnly({ review }) {
         <div className="overall-num">{review.overallScore.toFixed(1)}</div>
         <div className="overall-label">Overall Score</div>
       </div>
-      <div className="rating-row"><div className="rating-label">Doneness</div><Stars value={review.donenessRating} readOnly /></div>
-      <div className="rating-row"><div className="rating-label">Flavor</div><Stars value={review.flavorRating} readOnly /></div>
-      <div className="rating-row"><div className="rating-label">Tenderness</div><Stars value={review.tendernessRating} readOnly /></div>
-      <div className="rating-row"><div className="rating-label">Value</div><Stars value={review.valueRating} readOnly /></div>
+      <div className="rating-row"><div className="rating-label">Service</div><Stars value={review.serviceRating} readOnly /></div>
+      <div className="rating-row"><div className="rating-label">Ambiance</div><Stars value={review.ambianceRating} readOnly /></div>
+      <div className="rating-row"><div className="rating-label">Food Quality</div><Stars value={review.foodQualityRating} readOnly /></div>
+      <div className="rating-row"><div className="rating-label">Taste</div><Stars value={review.tasteRating} readOnly /></div>
       {review.notes && (
         <div style={{ padding: '16px 24px', fontStyle: 'italic', color: 'var(--color-text-dim)', fontSize: 16 }}>
           "{review.notes}"
@@ -64,23 +64,29 @@ function ReviewReadOnly({ review }) {
 export default function ReviewScreen() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const fileInputRef = useRef(null);
 
-  // Read-only mode: viewing a specific review
-  const [reviewDetail, setReviewDetail] = useState(null);
+  const [reviewDetail, setReviewDetail]   = useState(null);
   const [detailLoading, setDetailLoading] = useState(!!id);
 
-  // New review flow state
-  const [step, setStep] = useState(0);
-  const [pending, setPending] = useState([]);
+  const [step, setStep]                   = useState(0);
+  const [pending, setPending]             = useState([]);
   const [loadingPending, setLoadingPending] = useState(!id);
   const [selectedMeatup, setSelectedMeatup] = useState(null);
-  const [cutName, setCutName] = useState('');
-  const [weightOz, setWeightOz] = useState('');
-  const [orderId, setOrderId] = useState(null);
-  const [ratings, setRatings] = useState({ doneness: 0, flavor: 0, tenderness: 0, value: 0 });
-  const [notes, setNotes] = useState('');
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [cutName, setCutName]             = useState('');
+  const [weightOz, setWeightOz]           = useState('');
+  const [orderId, setOrderId]             = useState(null);
+  const [reviewId, setReviewId]           = useState(null);
+  const [ratings, setRatings]             = useState({ service: 0, ambiance: 0, foodQuality: 0, taste: 0 });
+  const [notes, setNotes]                 = useState('');
+  const [error, setError]                 = useState('');
+  const [submitting, setSubmitting]       = useState(false);
+
+  // Photo upload state (step 3)
+  const [pendingPhotos, setPendingPhotos] = useState([]); // { file, preview }
+  const [uploadedUrls, setUploadedUrls]   = useState([]);
+  const [uploading, setUploading]         = useState(false);
+  const [uploadError, setUploadError]     = useState('');
 
   useEffect(() => {
     if (id) {
@@ -132,13 +138,14 @@ export default function ReviewScreen() {
     setError('');
     setSubmitting(true);
     try {
-      await submitReview(orderId, {
-        donenessRating: ratings.doneness || 1,
-        flavorRating: ratings.flavor || 1,
-        tendernessRating: ratings.tenderness || 1,
-        valueRating: ratings.value || 1,
+      const review = await submitReview(orderId, {
+        serviceRating:    ratings.service    || 1,
+        ambianceRating:   ratings.ambiance   || 1,
+        foodQualityRating: ratings.foodQuality || 1,
+        tasteRating:      ratings.taste      || 1,
         notes: notes.trim() || null,
       });
+      setReviewId(review.id);
       setStep(3);
     } catch (err) {
       setError(err.message);
@@ -147,21 +154,119 @@ export default function ReviewScreen() {
     }
   };
 
-  // Step 3: Submitted
-  if (step === 3) return (
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files ?? []);
+    const previews = files.map(f => ({ file: f, preview: URL.createObjectURL(f) }));
+    setPendingPhotos(prev => [...prev, ...previews]);
+    e.target.value = '';
+  };
+
+  const removePhoto = (index) => {
+    setPendingPhotos(prev => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const handleUploadAndFinish = async () => {
+    if (pendingPhotos.length === 0) { setStep(4); return; }
+    setUploading(true);
+    setUploadError('');
+    try {
+      const urls = await Promise.all(
+        pendingPhotos.map(({ file }) => uploadPhoto(reviewId, file).then(r => r.url))
+      );
+      setUploadedUrls(urls);
+      setStep(4);
+    } catch {
+      setUploadError('One or more photos failed to upload. You can try again or skip.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const resetAndGoHome = () => {
+    pendingPhotos.forEach(p => URL.revokeObjectURL(p.preview));
+    setStep(0); setSelectedMeatup(null); setCutName(''); setWeightOz('');
+    setOrderId(null); setReviewId(null);
+    setRatings({ service: 0, ambiance: 0, foodQuality: 0, taste: 0 });
+    setNotes(''); setPendingPhotos([]); setUploadedUrls([]);
+    navigate('/home');
+  };
+
+  // Step 4: Success
+  if (step === 4) return (
     <div className="submitted-wrap">
       <div className="check-circle"><Check size={38} strokeWidth={3} /></div>
       <div className="submitted-title">Review <em style={{ color: 'var(--color-gold)' }}>committed.</em></div>
-      <div className="submitted-sub">Your cut is in the ledger. The shareholders will see it at the next meatup.</div>
-      <button className="submit-btn" style={{ marginTop: 32 }} onClick={() => {
-        setStep(0); setSelectedMeatup(null); setCutName(''); setWeightOz('');
-        setOrderId(null); setRatings({ doneness: 0, flavor: 0, tenderness: 0, value: 0 }); setNotes('');
-        navigate('/');
-      }}>Return Home</button>
+      <div className="submitted-sub">
+        Your cut is in the ledger.
+        {uploadedUrls.length > 0 && ` ${uploadedUrls.length} photo${uploadedUrls.length > 1 ? 's' : ''} attached.`}
+      </div>
+      <button className="submit-btn" style={{ marginTop: 32 }} onClick={resetAndGoHome}>
+        Return Home
+      </button>
     </div>
   );
 
-  // Step 0: Select meatup (only if multiple pending)
+  // Step 3: Photo upload
+  if (step === 3) return (
+    <>
+      <button className="back-link" onClick={() => setStep(2)}>← Back</button>
+      <div className="screen-header">
+        <div className="greeting">Add <em>Photos</em></div>
+        <div className="subgreet">Optional — attach shots of your steak.</div>
+      </div>
+
+      <div style={{ padding: '0 24px 24px' }}>
+        {/* Previews */}
+        {pendingPhotos.length > 0 && (
+          <div className="photo-preview-grid">
+            {pendingPhotos.map((p, i) => (
+              <div key={i} className="photo-preview-item">
+                <img src={p.preview} alt={`Photo ${i + 1}`} className="photo-preview-img" />
+                <button className="photo-remove-btn" onClick={() => removePhoto(i)} type="button">
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          style={{ display: 'none' }}
+          onChange={handleFileSelect}
+        />
+
+        <button
+          className="photo-add-btn"
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+        >
+          <ImagePlus size={18} />
+          <span>Add Photos</span>
+        </button>
+
+        {uploadError && <div className="error-msg" style={{ marginTop: 12 }}>{uploadError}</div>}
+
+        <button
+          className="submit-btn"
+          style={{ marginTop: 16 }}
+          onClick={handleUploadAndFinish}
+          disabled={uploading}
+        >
+          {uploading ? 'Uploading…' : pendingPhotos.length > 0 ? `Upload & Finish` : 'Skip & Finish'}
+        </button>
+      </div>
+    </>
+  );
+
+  // Step 0: Select meatup
   if (step === 0) {
     if (loadingPending) return <div style={{ padding: 48, textAlign: 'center', color: 'var(--color-gold-dim)' }}>Loading…</div>;
     if (pending.length === 0) return (
@@ -223,7 +328,7 @@ export default function ReviewScreen() {
     <>
       <button className="back-link" onClick={() => setStep(1)}>← Back</button>
       <div className="meat-hero">
-        <div className="marbling" style={{ opacity: 0.5, backgroundImage: 'radial-gradient(ellipse 60px 14px at 25% 35%, rgba(244,232,208,0.6), transparent), radial-gradient(ellipse 40px 10px at 60% 55%, rgba(244,232,208,0.4), transparent), radial-gradient(ellipse 80px 16px at 75% 30%, rgba(244,232,208,0.5), transparent)' }} />
+        <div className="marbling" style={{ opacity: 0.5 }} />
         <div className="meat-hero-label">
           {weightOz && <div className="meat-hero-sub">YOUR ORDER · {weightOz} OZ</div>}
           <div className="meat-hero-title">{cutName}</div>
@@ -234,20 +339,20 @@ export default function ReviewScreen() {
         <div className="overall-label">Overall Score</div>
       </div>
       <div className="rating-row">
-        <div className="rating-label">Doneness</div>
-        <Stars value={ratings.doneness} onChange={v => setRatings(r => ({ ...r, doneness: v }))} />
+        <div className="rating-label">Service</div>
+        <Stars value={ratings.service} onChange={v => setRatings(r => ({ ...r, service: v }))} />
       </div>
       <div className="rating-row">
-        <div className="rating-label">Flavor</div>
-        <Stars value={ratings.flavor} onChange={v => setRatings(r => ({ ...r, flavor: v }))} />
+        <div className="rating-label">Ambiance</div>
+        <Stars value={ratings.ambiance} onChange={v => setRatings(r => ({ ...r, ambiance: v }))} />
       </div>
       <div className="rating-row">
-        <div className="rating-label">Tenderness</div>
-        <Stars value={ratings.tenderness} onChange={v => setRatings(r => ({ ...r, tenderness: v }))} />
+        <div className="rating-label">Food Quality</div>
+        <Stars value={ratings.foodQuality} onChange={v => setRatings(r => ({ ...r, foodQuality: v }))} />
       </div>
       <div className="rating-row">
-        <div className="rating-label">Value</div>
-        <Stars value={ratings.value} onChange={v => setRatings(r => ({ ...r, value: v }))} />
+        <div className="rating-label">Taste</div>
+        <Stars value={ratings.taste} onChange={v => setRatings(r => ({ ...r, taste: v }))} />
       </div>
       <div className="divider-ornament">· · ·</div>
       <div style={{ padding: '0 24px' }}>

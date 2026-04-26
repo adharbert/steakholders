@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { getMe, login as apiLogin, register as apiRegister } from '../api/auth';
+import { getMe, login as apiLogin, register as apiRegister, oauthLogin as apiOauthLogin } from '../api/auth';
 
 const AuthContext = createContext(null);
 
@@ -24,17 +24,24 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (credentials) => {
-    const { token, user } = await apiLogin(credentials);
-    localStorage.setItem('token', token);
-    setUser(user);
-    return user;
+    const res = await apiLogin(credentials);
+    localStorage.setItem('token', res.token);
+    setUser(res.user);
+    return res.user;
   };
 
   const register = async (data) => {
-    const { token, user } = await apiRegister(data);
-    localStorage.setItem('token', token);
-    setUser(user);
-    return user;
+    const res = await apiRegister(data);
+    localStorage.setItem('token', res.token);
+    setUser(res.user);
+    return res.user;
+  };
+
+  const oauthLogin = async (data) => {
+    const res = await apiOauthLogin(data);
+    localStorage.setItem('token', res.token);
+    setUser(res.user);
+    return res; // { token, user, isNewUser }
   };
 
   const logout = () => {
@@ -43,7 +50,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, oauthLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );

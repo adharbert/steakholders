@@ -4,11 +4,11 @@ status: complete
 
 # TASK-18 · Meatup Creation Screen
 
-Allow users to schedule a new meatup event.
+Allow users to schedule a new meatup event with venue type selection, restaurant search, and group assignment.
 
 ## Goal
 
-Any logged-in user can create a new meatup (schedule a steak dinner). The screen is accessible from the Home screen via a "Schedule a Meatup" button shown when no upcoming meatup exists, or via a `+` button in the header.
+Any logged-in user can create a new meatup. Supports four venue types (restaurant, home, park, other). Restaurant events require selecting from the local restaurant database. Non-restaurant events take a venue name and optional address. If a group is selected, all active members get auto-RSVPed as "pending".
 
 ## File
 
@@ -25,46 +25,55 @@ Any logged-in user can create a new meatup (schedule a steak dinner). The screen
 [Header: "Schedule a Meatup"]
 [Subheading: "The shareholders await your call."]
 
-[Restaurant Name input — required]
-  placeholder: "e.g. Bern's Steak House"
+[Venue Type selector — pill buttons: Restaurant | Home | Park | Other]
 
-[Location input — required]
-  placeholder: "e.g. Tampa, Florida"
+[Group picker — dropdown, optional — shows if user belongs to any groups]
+  hint: "All active group members will get an RSVP request."
 
-[Date input — date picker, required]
-  Label: "Date"
+[IF venue type == "restaurant"]
+  [Restaurant search input + Search button]
+    → shows result list (name, city/state) on search
+    → selecting a result replaces input with "selected" display + "Change ×" button
 
-[Time input — time picker, required]
-  Label: "Time"
+[IF venue type != "restaurant"]
+  [Venue Name input — required]
+  [City input — optional]
+  [State + Zip — optional, side by side]
 
-[Notes textarea — optional]
-  placeholder: "Reservation details, dress code, etc."
+[Date — date picker, required]
+[Time — time picker, required]
+[Notes — textarea, optional]
 
-[Error message (if any)]
-
-[CALL THE MEATUP button — full width, dark red]
+[Error message]
+[CALL THE MEATUP button]
 ```
 
 ## Behavior
 
-- Client-side validation before submit:
-  - Restaurant Name: required, max 100 chars.
-  - Location: required, max 100 chars.
-  - Date: required, must be in the future.
-  - Time: required.
-- On submit: combine date + time into a UTC ISO string, then `createMeatup({ restaurantName, location, eventDate, notes })`.
-- On success: navigate to `/` (Home), which will now show the new upcoming meatup.
-- The creating user is automatically RSVPed as "going" (handled server-side per TASK-05).
+- Venue type defaults to "restaurant".
+- Changing venue type clears any selected restaurant or venue fields.
+- Restaurant search calls `GET /api/restaurants/search?q=<query>`.
+- Group picker populated from `GET /api/groups/my`.
+- On submit, sends `createMeatup({ venueType, eventDate, groupId, notes, restaurantId, venueName, venueCity, venueState, venueZip })`.
+- On success: navigate to `/home`.
 
 ## Entry Points
 
-1. Home screen "Schedule a Meatup" button — shown in the Upcoming Meatup section when no upcoming meatup exists.
-2. `+` icon button in the Home screen header (right side), always visible.
+1. Home screen "Schedule a Meatup" button.
+2. `+` icon in the Home screen header.
+
+## API Dependencies
+
+- `POST /api/meatups` — create meatup
+- `GET /api/restaurants/search` — restaurant search
+- `GET /api/groups/my` — group list for picker
 
 ## Acceptance Criteria
 
-- [ ] Form validates all required fields client-side.
-- [ ] Submitting a past date shows "Date must be in the future."
-- [ ] On success, user is navigated to Home and the new meatup appears in the Upcoming Meatup card.
-- [ ] Creating user is automatically listed as "going" in the attendee list.
-- [ ] Loading state shown on the submit button while the request is in flight.
+- [ ] Venue type selector shows four options; switching clears venue-specific fields.
+- [ ] Restaurant search works; selected restaurant shown with "Change" option.
+- [ ] Non-restaurant venues accept name + optional address.
+- [ ] Group picker shown when user is in at least one group; hint shows when group selected.
+- [ ] Date/time validation: required, must be in the future.
+- [ ] On success, navigated to Home.
+- [ ] All group members get pending RSVP (server-side).

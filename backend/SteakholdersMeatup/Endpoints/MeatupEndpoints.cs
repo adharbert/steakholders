@@ -8,6 +8,8 @@ namespace SteakholdersMeatup.Endpoints;
 
 public static class MeatupEndpoints
 {
+    private static readonly string[] ValidVenueTypes = ["restaurant", "home", "park", "other"];
+
     public static void MapMeatupEndpoints(this WebApplication app)
     {
         app.MapGet("/api/meatups", async (
@@ -21,6 +23,8 @@ public static class MeatupEndpoints
 
             var query = db.Meatups
                 .Include(m => m.CreatedBy)
+                .Include(m => m.Group)
+                .Include(m => m.Restaurant)
                 .Include(m => m.Attendances).ThenInclude(a => a.User)
                 .Include(m => m.Orders).ThenInclude(o => o.Review)
                 .AsQueryable();
@@ -38,6 +42,8 @@ public static class MeatupEndpoints
             var userId = GetUserId(principal);
             var m = await db.Meatups
                 .Include(m => m.CreatedBy)
+                .Include(m => m.Group)
+                .Include(m => m.Restaurant)
                 .Include(m => m.Attendances).ThenInclude(a => a.User)
                 .Include(m => m.Orders).ThenInclude(o => o.User)
                 .Include(m => m.Orders).ThenInclude(o => o.Review)
@@ -50,16 +56,37 @@ public static class MeatupEndpoints
 
         app.MapPost("/api/meatups", async (CreateMeatupRequest req, AppDbContext db, ClaimsPrincipal principal) =>
         {
-            if (string.IsNullOrWhiteSpace(req.RestaurantName))
-                return Results.BadRequest(new { error = "Restaurant name is required." });
-            if (string.IsNullOrWhiteSpace(req.Location))
-                return Results.BadRequest(new { error = "Location is required." });
+            if (!ValidVenueTypes.Contains(req.VenueType))
+                return Results.BadRequest(new { error = "VenueType must be restaurant, home, park, or other." });
+
+            if (req.VenueType == "restaurant" && req.RestaurantId is null)
+                return Results.BadRequest(new { error = "RestaurantId is required for restaurant events." });
+
+            if (req.VenueType != "restaurant" && string.IsNullOrWhiteSpace(req.VenueName))
+                return Results.BadRequest(new { error = "VenueName is required for non-restaurant events." });
 
             var userId = GetUserId(principal);
+
+            // Validate group membership if a group is specified
+            if (req.GroupId.HasValue)
+            {
+                var isMember = await db.GroupMemberships.AnyAsync(m =>
+                    m.GroupId == req.GroupId && m.UserId == userId && m.Status == "active");
+                if (!isMember)
+                    return Results.Forbid();
+            }
+
             var meatup = new Meatup
             {
-                RestaurantName = req.RestaurantName,
-                Location = req.Location,
+                VenueType = req.VenueType,
+                GroupId = req.GroupId,
+                RestaurantId = req.RestaurantId,
+                VenueName = req.VenueName,
+                VenueStreet1 = req.VenueStreet1,
+                VenueCity = req.VenueCity,
+                VenueState = req.VenueState,
+                VenueZip = req.VenueZip,
+                VenueCountry = req.VenueCountry,
                 EventDate = req.EventDate.ToUniversalTime(),
                 Notes = req.Notes,
                 CreatedByUserId = userId
@@ -67,10 +94,29 @@ public static class MeatupEndpoints
             db.Meatups.Add(meatup);
             await db.SaveChangesAsync();
 
-            db.Attendances.Add(new Attendance { MeatupId = meatup.Id, UserId = userId, Status = "going" });
+            // Auto-RSVP all active group members with "pending" status
+            if (req.GroupId.HasValue)
+            {
+                var memberIds = await db.GroupMemberships
+                    .Where(m => m.GroupId == req.GroupId && m.Status == "active")
+                    .Select(m => m.UserId)
+                    .ToListAsync();
+
+                foreach (var memberId in memberIds)
+                {
+                    var status = memberId == userId ? "going" : "pending";
+                    db.Attendances.Add(new Attendance { MeatupId = meatup.Id, UserId = memberId, Status = status });
+                }
+            }
+            else
+            {
+                db.Attendances.Add(new Attendance { MeatupId = meatup.Id, UserId = userId, Status = "going" });
+            }
             await db.SaveChangesAsync();
 
             await db.Entry(meatup).Reference(m => m.CreatedBy).LoadAsync();
+            await db.Entry(meatup).Reference(m => m.Group).LoadAsync();
+            await db.Entry(meatup).Reference(m => m.Restaurant).LoadAsync();
             await db.Entry(meatup).Collection(m => m.Attendances).Query().Include(a => a.User).LoadAsync();
 
             return Results.Created($"/api/meatups/{meatup.Id}", ToSummary(meatup, userId));
@@ -78,20 +124,33 @@ public static class MeatupEndpoints
 
         app.MapPut("/api/meatups/{id:int}", async (int id, UpdateMeatupRequest req, AppDbContext db, ClaimsPrincipal principal) =>
         {
+            if (!ValidVenueTypes.Contains(req.VenueType))
+                return Results.BadRequest(new { error = "VenueType must be restaurant, home, park, or other." });
+
             var userId = GetUserId(principal);
-            var meatup = await db.Meatups.FindAsync(id);
+            var meatup = await db.Meatups
+                .Include(m => m.CreatedBy)
+                .Include(m => m.Group)
+                .Include(m => m.Restaurant)
+                .Include(m => m.Attendances).ThenInclude(a => a.User)
+                .Include(m => m.Orders).ThenInclude(o => o.Review)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
             if (meatup is null) return Results.NotFound(new { error = "Meatup not found." });
             if (meatup.CreatedByUserId != userId) return Results.Forbid();
 
-            meatup.RestaurantName = req.RestaurantName;
-            meatup.Location = req.Location;
+            meatup.VenueType = req.VenueType;
+            meatup.GroupId = req.GroupId;
+            meatup.RestaurantId = req.RestaurantId;
+            meatup.VenueName = req.VenueName;
+            meatup.VenueStreet1 = req.VenueStreet1;
+            meatup.VenueCity = req.VenueCity;
+            meatup.VenueState = req.VenueState;
+            meatup.VenueZip = req.VenueZip;
+            meatup.VenueCountry = req.VenueCountry;
             meatup.EventDate = req.EventDate.ToUniversalTime();
             meatup.Notes = req.Notes;
             await db.SaveChangesAsync();
-
-            await db.Entry(meatup).Reference(m => m.CreatedBy).LoadAsync();
-            await db.Entry(meatup).Collection(m => m.Attendances).Query().Include(a => a.User).LoadAsync();
-            await db.Entry(meatup).Collection(m => m.Orders).Query().Include(o => o.Review).LoadAsync();
 
             return Results.Ok(ToSummary(meatup, userId));
         }).RequireAuthorization();
@@ -161,17 +220,38 @@ public static class MeatupEndpoints
     private static int GetUserId(ClaimsPrincipal p) =>
         int.Parse(p.FindFirstValue(ClaimTypes.NameIdentifier) ?? p.FindFirstValue("sub") ?? "0");
 
+    private static (string Name, string Location) GetVenueDisplay(Meatup m)
+    {
+        if (m.VenueType == "restaurant" && m.Restaurant is not null)
+            return (m.Restaurant.Name, $"{m.Restaurant.City}, {m.Restaurant.State}");
+
+        if (m.VenueType == "restaurant" && !string.IsNullOrWhiteSpace(m.RestaurantName))
+            return (m.RestaurantName, m.Location ?? "");
+
+        var venueName = m.VenueName ?? m.VenueType switch
+        {
+            "home" => "Home Event",
+            "park" => "Park Event",
+            _ => "Event"
+        };
+
+        var location = string.Join(", ", new[] { m.VenueCity, m.VenueState }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        return (venueName, location);
+    }
+
     private static MeatupSummaryDto ToSummary(Meatup m, int userId)
     {
         var goingCount = m.Attendances.Count(a => a.Status == "going");
         var myStatus = m.Attendances.FirstOrDefault(a => a.UserId == userId)?.Status;
         var scores = m.Orders.Where(o => o.Review is not null).Select(o => (double)o.Review!.OverallScore).ToList();
         double? avg = scores.Count > 0 ? Math.Round(scores.Average(), 1) : null;
+        var (name, location) = GetVenueDisplay(m);
 
         return new MeatupSummaryDto(
-            m.Id, m.RestaurantName, m.Location, m.EventDate,
+            m.Id, m.VenueType, name, location, m.EventDate,
             goingCount, myStatus, avg,
-            new UserDto(m.CreatedBy.Id, m.CreatedBy.Username, m.CreatedBy.DisplayName, m.CreatedBy.Role)
+            new UserDto(m.CreatedBy.Id, m.CreatedBy.Username, m.CreatedBy.DisplayName, m.CreatedBy.Role),
+            m.GroupId, m.Group?.Name
         );
     }
 
@@ -181,10 +261,12 @@ public static class MeatupEndpoints
             .Select(a => new AttendeeDto(a.UserId, a.User.DisplayName, a.User.Role, a.Status))
             .ToList();
 
+        var (name, location) = GetVenueDisplay(m);
+
         var reviews = m.Orders
             .Where(o => o.Review is not null)
             .Select(o => new ReviewDetailDto(
-                o.Review!.Id, m.Id, m.RestaurantName, m.EventDate,
+                o.Review!.Id, m.Id, name, m.EventDate,
                 o.UserId, o.User.DisplayName, o.CutName, o.WeightOz, o.Temperature,
                 o.Review.OverallScore, o.Review.ServiceRating, o.Review.AmbianceRating,
                 o.Review.FoodQualityRating, o.Review.TasteRating, o.Review.Notes, o.Review.CreatedAt
@@ -200,6 +282,7 @@ public static class MeatupEndpoints
                 m.Bill.TaxIncluded, m.Bill.SplitAmount, payments.Count, payments);
         }
 
-        return new MeatupDetailDto(m.Id, m.RestaurantName, m.Location, m.EventDate, m.Notes, attendees, reviews, billDto);
+        return new MeatupDetailDto(m.Id, m.VenueType, name, location, m.EventDate, m.Notes,
+            m.GroupId, m.Group?.Name, m.RestaurantId, attendees, reviews, billDto);
     }
 }
